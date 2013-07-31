@@ -1,5 +1,4 @@
 use Rack::Static, 
-  :urls => ["/ui"],
   :root => "public",
   :index => 'index.html'
 
