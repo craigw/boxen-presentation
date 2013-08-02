@@ -46,19 +46,215 @@
 
 
 <div class="slide">
-<h1>[slide title]</h1>
-<ul>
-<li>[point one]</li>
-<li>[point two]</li>
-<li>[point three]</li>
-<li>[point four]</li>
-<li>[point five]</li>
-</ul>
+<h1>Introducing Boxen</h1>
+<p>We've got a problem.</p>
+<p>Lots of applications.</p>
+<p>Lots of dependencies.</p>
+<p>Lots of configuration.</p>
 <div class="handout">
-[any material that should appear in print but not on the slide]
+We have a problem. We're got lots of applications, with lots of dependencies, which need quite a lot of configuration. We've not had much time to update the documentation for these projects so quite a bit is stored only in our heads. That's not great - it's error prone, and it makes it hard to get someone setup on a project.
+
+Alkesh, Ken and I have been using Boxen to manage our development environments recently. It's made project setup quite a lot simpler - when one of us sets up a project, we all get that project for free.
+
+I wanted to take 10 minutes just to run through what Boxen does, how to use it, and how to get started with it.
 </div>
 </div>
 
+<div class="slide">
+<h1>What does it do?</h1>
+<ul>
+  <li>Manages our development environments</li>
+  <li>Laptops, iMacs, whatever</li>
+  <li>Allows sharing of configuration and fixes</li>
+</ul>
+<p class="incremental">Great, but what does it <strong>do</strong>?</p>
+<div class="handout">
+What does Boxen do?
+
+As mentioned, Boxen manages our development environment for us. That's our MacBook or our iMac. What does it manage? Whatever we want it to. We're using it to setup projects - configure databases, setup virtual hosts, etc - and a few other things like manage our dotfiles for eg Vim and SSH. We can then share these projects and configuration files trivially.
+</div>
+</div>
+
+<div class="slide">
+<h1>Example: Friday Website</h1>
+<pre><code class="bash">
+$ git clone ssh://git.wearefriday.com/.../WAFI/website.git wafi-website
+$ cd wafi-website
+$ bundle
+$ bundle exec rackup -p 9292
+</code></pre>
+<br />
+<pre><code class="bash">$ boxen</code></pre>
+<div class="handout">
+Let's say I want to work on the Friday website. In the old world I'd clone the repository, run bundler to get all the dependencies, then run rackup or configure Pow.
+
+What does that look like in a Boxen world?
+</div>
+</div>
+
+
+<div class="slide">
+<h1>Example: Friday Website</h1>
+<pre><code class="puppet">
+class people::craigw {
+  class { 'project::wafi_website': }
+}
+</code></pre>
+<br />
+<pre><code class="bash">
+$ boxen
+$ cd ~/src/wafi-website
+$ bundle
+$ bundle exec unicorn -c config/unicorn.rb
+</code></pre>
+<div class="handout">
+I include the project configuration in my personal manifest, then I run boxen. That clones the project for me.
+
+Now I bundle to get the dependencies, then run Unicorn. Now I can access the website at http://wafi-website.dev/.
+
+Not too much different for this simple example. How about something more complex? How about Global Connections?
+</div>
+</div>
+
+
+<div class="slide">
+<h1>Example: Global Connections</h1>
+<pre><code class="puppet">
+class people::craigw {
+  class { [
+    'project::hsbcgc_www',
+    'project::hsbcgc_calypso',
+    'project::hsbcgc_calypso',
+    'project::hsbca_authentication',
+    'project::hsbca_registration',
+    'project::hsbca_account_recovery',
+    'project::hsbca_documents',
+    ...
+  ]: }
+}
+</code></pre>
+<div class="handout">
+Global Connections has a huge number of dependencies, including a bunch of hard to configure APIs. It's got a huge number of databases, configuration settings, projects, and who knows what else?
+
+With boxen I can install them all with a few simple changes to my personal manifest, then a run of Boxen.
+</div>
+</div>
+
+<div class="slide">
+<h1>Example: Global Connections</h1>
+<pre><code class="bash">
+$ boxen
+# Do this for all the GC projects:
+$ cd ~/src/[project name]
+$ bundle
+$ bundle exec unicorn -c config/unicorn.rb
+</code></pre>
+<div class="handout">
+I can then run them all pretty easily using Unicorn. Then I can access http://hsbcgc-www.dev/ in the browser and it's all ready to use. Ace!
+
+This isn't perfect - I need to know what the dependent projects are, and I need to setup all the data in them, but it's a lot better than we currently have. And for bonus points, I've setup xip.io names, so we can easily access each others services on standard ports as long as we know the required IP addresses.
+</div>
+</div>
+
+
+<div class="slide">
+<h1>All Projects?</h1>
+<pre><code class="puppet">
+class people::craigw {
+  class { 'project::all': }
+}
+</code></pre>
+<br />
+<pre><code class="bash">
+$ boxen
+</code></pre>
+<div class="handout">
+Rather than remembering each and every project name, I just include them all in my manifest.
+</div>
+</div>
+
+
+<div class="slide">
+<h1>Setting up a project for Boxen 1/2</h1>
+<pre><code class="puppet">
+class project::wafi_what_is_playing {
+  boxen::project { 'wafi-what-is-playing':
+    ruby          =&gt; '1.9.3-p392',
+    source        =&gt; 'ssh://git@git.wearefriday.com:7999/wafi/what-is-playing.git',
+    nginx         =&gt; true
+    # There are other options to setup Postgresql, MySQL, Mongo, etc.
+  }
+}</code></pre>
+<div class="handout">
+If you're setting up a new project, you can make it deployable under Boxen pretty easily.
+
+First, create a boxen::project entry in ~/src/our-boxen/projects/manifests/project_name.pp - copy an existing one then change the name to keep it simple.
+
+Include that project in your personal manifest, then run boxen.
+</div>
+</div>
+
+
+<div class="slide">
+<h1>Setting up a project for Boxen 2/2</h1>
+<ul>
+  <li>You'll also need to setup database.yml</li>
+  <li>As well as a config/unicorn.rb</li>
+</ul>
+<p>Again, copy existing projects files for this and change the database.yml database name appropriately.</p>
+<div class="handout">
+Next, cd ~/src/project-name and change database.yml or equivalent and unicorn.rb.
+
+Run Unicorn and  check you can see the project in the browser at http://project-name.dev/.
+
+If yes, add, commit, push the changes. Then let everyone know they can get that project using Boxen. Yay!
+
+Note: this will only do the initial clone of the project, if there are further changes to the project you've checked out you'll need to git pull yourself.
+</div>
+</div>
+
+
+<div class="slide">
+<h1>Handy shortcuts</h1>
+<ul>
+  <li>alias b='bundle'</li>
+  <li>alias be='b exec'</li>
+  <li>alias u='be unicorn -c config/unicorn.rb'</li>
+</ul>
+<div class="handout">
+I've found these to be useful Bash aliases while working with Boxen.
+</div>
+</div>
+
+
+<div class="slide">
+<h1>Caveats</h1>
+<p>Pow + Boxen = :(</p>
+<div class="handout">
+A caveat we've found. Pow and Boxen fight over the .dev domain.
+
+My solution has been to trust in Boxen and stop using other stuff. I'd quite like you to do the same.
+
+Also remember to commit and push your changes to the Boxen repo or you won't get any updates.
+</div>
+</div>
+
+
+<div class="slide">
+<h1>Conclusion</h1>
+<p>Use Boxen = :)</p>
+<div class="handout">
+If you use Boxen we all get a simple repeatable way to share our development environment setup. It's easy for each of us to do the same things as the others, because we've all got the same common base to build from.
+
+Boxen isn't a panacea, but it is a big step forward. Please use it.
+</div>
+</div>
+
+
+<div class="slide">
+<h1>Questions</h1>
+<p>Any questions?</p>
+</div>
 
 </div>
 
