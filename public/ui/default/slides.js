@@ -7,6 +7,7 @@ var undef;
 var slideCSS = '';
 var snum = 0;
 var smax = 1;
+var inpop = false;
 var incpos = 0;
 var number = undef;
 var s5mode = true;
@@ -112,7 +113,9 @@ function currentSlide() {
 	if (snum == 0) {
 		cs.style.visibility = 'hidden';
 	} else {
+/*  // uncomment to see slide #s after title slide 
 		cs.style.visibility = 'visible';
+*/
 	}
 }
 
@@ -137,7 +140,8 @@ function go(step) {
 	var nid = 'slide' + snum;
 	var ne = document.getElementById(nid);
 	if (!ne) {
-		ne = document.getElementById('slide0');
+	  nid = 'slide0';
+		ne = document.getElementById(nid);
 		snum = 0;
 	}
 	if (step < 0) {incpos = incrementals[snum].length} else {incpos = 0;}
@@ -155,6 +159,13 @@ function go(step) {
 	ne.style.visibility = 'visible';
 	jl.selectedIndex = snum;
 	currentSlide();
+	if (nid!=cid && !inpop) {
+	// navigated to a new slide, set history
+	  if (window.history.pushState) {
+	    // alert(cnum + ' -&gt; ' + snum);
+	    window.history.pushState(null,document.title,'#slide' + snum);
+	  }
+	}
 	number = 0;
 }
 
@@ -320,7 +331,10 @@ function findSlide(hash) {
 }
 
 function slideJump() {
-	if (window.location.hash == null) return;
+	if (window.location.hash == '') {
+		go(0 - snum);
+  	return;
+	}
 	var sregex = /^#slide(\d+)$/;
 	var matches = sregex.exec(window.location.hash);
 	var dest = null;
@@ -549,4 +563,7 @@ function startup() {
 }
 
 window.onload = startup;
+window.onpopstate = function(event) { 
+  inpop=true; slideJump(); inpop=false;
+};
 window.onresize = function(){setTimeout('fontScale()', 50);}
